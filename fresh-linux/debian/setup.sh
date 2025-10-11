@@ -15,6 +15,7 @@ INSTALL_UFW=false
 INSTALL_UTILS=false
 INSTALL_DOCKER=false
 INSTALL_NGINX=false
+INSTALL_CADDY=false
 LOG_FILE="/var/log/debian_setup.log"
 
 # ---------------------------
@@ -45,16 +46,16 @@ Options:
   --utils      Install essential utilities
   --docker     Install Docker and Docker Compose
   --nginx      Install and start Nginx
-  --all        Install everything
+  --caddy      Install and start Caddy web server
+  --all        Install everything with Nginx as default web server
   -h, --help   Show this help message
 EOF
     exit 1
 }
 
 # ---------------------------
-# Functions
+# System Functions
 # ---------------------------
-
 update_system() {
     log "Updating and upgrading system packages..."
     export DEBIAN_FRONTEND=noninteractive
@@ -73,7 +74,6 @@ install_ufw() {
 
 setup_ufw() {
     install_ufw
-
     log "Configuring UFW firewall..."
     sudo ufw allow 22/tcp || die "Failed to allow SSH"
     sudo ufw allow 80/tcp || die "Failed to allow HTTP"
@@ -104,6 +104,15 @@ https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /
     log "Docker installation complete. You may need to log out and back in for Docker group changes to take effect."
 }
 
+# ---------------------------
+# Web Server Functions
+# ---------------------------
+check_web_server_conflicts() {
+    if $INSTALL_NGINX && $INSTALL_CADDY; then
+        die "You cannot install both Nginx and Caddy at the same time. Please choose only one."
+    fi
+}
+
 install_nginx() {
     log "Installing and starting Nginx..."
     export DEBIAN_FRONTEND=noninteractive
@@ -113,6 +122,21 @@ install_nginx() {
     log "Nginx installation complete."
 }
 
+install_caddy() {
+    log "Installing and starting Caddy..."
+    sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https || die "Failed to install prerequisites"
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+    sudo apt update -y
+    sudo apt install -y caddy || die "Failed to install Caddy"
+    sudo systemctl enable caddy || die "Failed to enable Caddy"
+    sudo systemctl start caddy || die "Failed to start Caddy"
+    log "Caddy installation complete."
+}
+
+# ---------------------------
+# System Verification
+# ---------------------------
 verify_system() {
     log "Verifying system health..."
     echo -e "\nDisk Usage:" | tee -a "$LOG_FILE"
@@ -136,11 +160,13 @@ while [[ "$#" -gt 0 ]]; do
         --utils) INSTALL_UTILS=true ;;
         --docker) INSTALL_DOCKER=true ;;
         --nginx) INSTALL_NGINX=true ;;
+        --caddy) INSTALL_CADDY=true ;;
         --all)
             INSTALL_UFW=true
             INSTALL_UTILS=true
             INSTALL_DOCKER=true
-            INSTALL_NGINX=true
+            INSTALL_NGINX=false   
+            INSTALL_CADDY=true  # Default web server for --all
             ;;
         -h|--help) usage ;;
         *) die "Unknown option: $1" ;;
@@ -157,7 +183,12 @@ main() {
     $INSTALL_UFW && setup_ufw
     $INSTALL_UTILS && install_utils
     $INSTALL_DOCKER && install_docker
+
+    # Ensure only one web server is selected
+    check_web_server_conflicts
+
     $INSTALL_NGINX && install_nginx
+    $INSTALL_CADDY && install_caddy
 
     verify_system
 
