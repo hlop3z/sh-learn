@@ -1,0 +1,78 @@
+#compdef cli cli.sh
+
+#
+# Zsh completion for CLI framework
+#
+# Installation:
+#   Copy to a directory in your $fpath, e.g.:
+#   cp _cli ~/.zsh/completions/
+#
+#   Then add to ~/.zshrc:
+#   fpath=(~/.zsh/completions $fpath)
+#   autoload -Uz compinit && compinit
+#
+
+_cli() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments -C \
+        '1: :->command' \
+        '*: :->args' \
+        '--help[Show help message]' \
+        '-h[Show help message]' \
+        '--verbose[Enable verbose output]' \
+        '-v[Enable verbose output]' \
+        '--quiet[Suppress output]' \
+        '-q[Suppress output]' \
+        '--no-color[Disable colored output]' \
+        '--version[Show version]' \
+        '-V[Show version]'
+
+    case $state in
+        command)
+            local commands=(
+                'greet:Greet a user with a friendly message'
+                'info:Display CLI and system information'
+                'help:Show help information'
+                'version:Show version information'
+                'commands:List available commands'
+            )
+            _describe -t commands 'cli commands' commands
+            ;;
+        args)
+            case ${line[1]} in
+                greet)
+                    _arguments \
+                        '--name[Name to greet]:name:' \
+                        '-n[Name to greet]:name:' \
+                        '--uppercase[Print in uppercase]' \
+                        '-u[Print in uppercase]' \
+                        '--times[Number of times to greet]:times:(1 2 3 5 10)' \
+                        '-t[Number of times to greet]:times:(1 2 3 5 10)' \
+                        '--help[Show help]' \
+                        '-h[Show help]'
+                    ;;
+                info)
+                    _arguments \
+                        '--help[Show help]' \
+                        '-h[Show help]'
+                    ;;
+                help)
+                    local topics=(
+                        'greet:Greet command help'
+                        'info:Info command help'
+                        'version:Version command help'
+                        'commands:Commands list help'
+                    )
+                    _describe -t topics 'help topics' topics
+                    ;;
+                *)
+                    _default
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_cli "$@"

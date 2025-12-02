@@ -1,0 +1,30 @@
+{
+  "name": "greet",
+  "description": "Greet a user with a friendly message",
+  "args": [
+    {
+      "name": "name",
+      "short": "n",
+      "type": "string",
+      "required": false,
+      "default": "Stranger",
+      "help": "Name to greet"
+    },
+    {
+      "name": "uppercase",
+      "short": "u",
+      "type": "bool",
+      "required": false,
+      "default": "false",
+      "help": "Print in uppercase"
+    },
+    {
+      "name": "times",
+      "short": "t",
+      "type": "int",
+      "required": false,
+      "default": "1",
+      "help": "Number of times to greet"
+    }
+  ]
+}
